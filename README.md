@@ -78,5 +78,3 @@ npm test
 
 Detailed instructions (including running the API and failure simulation): [`docs/testing-guide.md`](docs/testing-guide.md)
 
-## Interview Talk Track
-> “To strengthen my configuration management skills, I created a structured Azure DevOps practice project where I implemented staged environment promotion, artifact versioning, branch protection, SQL script version control, and manual approval gates. I also simulated deployment failures to practice rollback and incident response.”
