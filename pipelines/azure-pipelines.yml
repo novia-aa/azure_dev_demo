@@ -1,0 +1,117 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  nodeVersion: '20.x'
+  artifactName: 'webapp'
+  versionTag: '$(Build.BuildNumber)'
+
+stages:
+  - stage: Build
+    displayName: Build and Test
+    jobs:
+      - job: BuildAndTest
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '$(nodeVersion)'
+            displayName: Use Node.js
+
+          - script: |
+              cd app
+              npm ci
+            displayName: Install dependencies
+
+          - script: |
+              cd app
+              npm test
+            displayName: Run tests
+
+  - stage: Publish
+    displayName: Publish Artifact
+    dependsOn: Build
+    jobs:
+      - job: PublishArtifact
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              mkdir -p $(Build.ArtifactStagingDirectory)
+              cp -R app database $(Build.ArtifactStagingDirectory)
+            displayName: Prepare artifact content
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactName)-$(versionTag).zip'
+            displayName: Archive build output
+
+          - publish: '$(Build.ArtifactStagingDirectory)/$(artifactName)-$(versionTag).zip'
+            artifact: $(artifactName)
+            displayName: Publish artifact
+
+          - script: |
+              echo "##vso[build.addbuildtag]v$(versionTag)"
+            displayName: Tag build version
+
+  - stage: Deploy_Dev
+    displayName: Deploy to Dev
+    dependsOn: Publish
+    variables:
+      - group: Dev-Variables
+    jobs:
+      - deployment: DeployDev
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: echo "Deploying $(artifactName)-$(versionTag) to Dev"
+                  displayName: Deploy artifact to Dev
+
+  - stage: Deploy_QA
+    displayName: Deploy to QA
+    dependsOn: Deploy_Dev
+    variables:
+      - group: QA-Variables
+    jobs:
+      - deployment: DeployQA
+        environment: qa
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: echo "Deploying $(artifactName)-$(versionTag) to QA after manual approval"
+                  displayName: Deploy artifact to QA
+
+  - stage: Deploy_Prod
+    displayName: Deploy to Production
+    dependsOn: Deploy_QA
+    variables:
+      - group: Prod-Variables
+    jobs:
+      - deployment: DeployProd
+        environment: prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: echo "Deploying $(artifactName)-$(versionTag) to Production after manual approval"
+                  displayName: Deploy artifact to Production

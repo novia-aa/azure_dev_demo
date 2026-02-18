@@ -1,0 +1,21 @@
+{
+  "name": "ado-cicd-practice-api",
+  "version": "1.0.0",
+  "description": "Small Node.js API used to demonstrate Azure DevOps CI/CD governance patterns.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest --runInBand",
+    "lint": "node -e \"console.log('No lint rules configured yet')\""
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
